@@ -1,0 +1,17 @@
+[busy] span {
+    opacity: 0;
+}
+
+button {
+    display: grid;
+    place-content: center;
+}
+
+button > * {
+    grid-row: 1;
+    grid-column: 1;
+}
+
+i {
+    align-self: center;
+}

@@ -1,0 +1,74 @@
+﻿@using CovidTracker.Shared.Common.RenderLocation;
+
+@*I know this is a lot for just a button but it pays off to have the flexibility*@
+
+<button disabled=@(RenderLocation.IsInteractiveOnStartup is false || Disabled || _state is ButtonState.Busy)
+    type=@SubmitForm.If("submit", "button")
+    busy=@(_state is ButtonState.Busy)
+    @ref=Element
+    @onclick=OnClickAsync
+    @onclick:stopPropagation
+    @onclick:preventDefault=@(SubmitForm is false)
+    class="btn btn-@Theme @CssClass">
+    @if (_state is ButtonState.Busy)
+    {
+        <i class="fas fa-spinner fa-spin"></i>
+    }
+    else if (Icon is not null)
+    {
+        <i class="fas fa-@Icon"></i>
+    }
+    @if (string.IsNullOrWhiteSpace(Text) is false)
+    {
+        <span>@Text</span>
+    }
+</button>
+
+@code {
+    [Inject] public required ICurrentRenderLocation RenderLocation { get; init; }
+
+    [Parameter] public string? Text { get; set; }
+    [Parameter] public string? CssClass { get; set; }
+    [Parameter] public string? Area { get; set; }
+    [Parameter] public string? Icon { get; set; }
+    [Parameter] public string? Title { get; set; }
+    [Parameter] public string? Theme { get; set; } = "primary";
+    [Parameter] public bool SubmitForm { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public EventCallback OnClick { get; set; }
+    [Parameter] public Action? StateChangeHook { get; set; }
+
+    public ElementReference? Element { get; private set; }
+
+    ButtonState _state;
+
+    async Task OnClickAsync()
+    {
+        /* The idea here is to disable the button while it is doing whatever is is supposed to do,
+         * this is specially useful for network related tasks
+        */
+        try
+        {
+            if (SubmitForm || OnClick.HasDelegate is false)
+                return;
+
+            _state = ButtonState.Busy;
+
+            StateHasChanged();
+
+            await OnClick.InvokeAsync();
+
+            StateChangeHook?.Invoke();
+        }
+        finally
+        {
+            _state = ButtonState.None;
+        }
+    }
+
+    enum ButtonState
+    {
+        None,
+        Busy
+    }
+}

@@ -1,0 +1,17 @@
+﻿@using CovidTracker.Components.Shared;
+@using Microsoft.AspNetCore.Components.Routing
+
+@* We move the App.razor to the component library to ensure we can move it to a Blazor server / MAUI environment with 0 friction if needed *@
+
+<Router AppAssembly="@typeof(App).Assembly">
+    <Found Context="routeData">
+        <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
+        <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+    </Found>
+    <NotFound>
+        <PageTitle>Not found</PageTitle>
+        <LayoutView Layout="@typeof(MainLayout)">
+            <p role="alert">Sorry, there's nothing at this address.</p>
+        </LayoutView>
+    </NotFound>
+</Router>

@@ -1,0 +1,43 @@
+﻿@using CovidTracker.Components.Common;
+@using CovidTracker.Shared.Common.RenderLocation;
+
+@inherits WithModule
+
+@if (RenderLocation.RenderLocation is RenderLocations.Client)
+{
+    <div id="map"></div>
+}
+else
+{
+    <div class="loading">Can't really pre-render the map, not easily at least</div>
+    @*
+        I mean, as far as I can tell the map uses SVG so if it was all blazor it could be pre rendered
+        but that's a topic for another day
+    *@
+}
+
+@code {
+    [Parameter, EditorRequired] public required string State { get; set; }
+
+    [Inject] public required ICurrentRenderLocation RenderLocation { get; set; }
+
+    string? _currentState;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (RenderLocation.IsJSRuntimeAvailableOnInitialization is false)
+            return;
+
+        await InvokeVoidModuleMethodAsync("init", State);
+        _currentState = State;
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_currentState) || _currentState == State)
+            return;
+
+        await InvokeVoidModuleMethodAsync("panTo", State);
+        _currentState = State;
+    }
+}

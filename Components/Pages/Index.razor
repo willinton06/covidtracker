@@ -1,0 +1,112 @@
+﻿@page "/{State?}"
+
+@implements IDisposable
+
+@using Blazored.LocalStorage;
+@using CovidTracker.Shared.Common.RenderLocation;
+@using CovidTracker.Shared.Domains.DailyStats;
+@using CovidTracker.Shared.States;
+@using Microsoft.AspNetCore.Components.QuickGrid
+@using Microsoft.AspNetCore.Components.Forms;
+@using Microsoft.Extensions.Logging;
+@using CovidTracker.Components.Common;
+@using CovidTracker.Components.Charts;
+@using CovidTracker.Components.Maps;
+
+<PageTitle>Covid Tracker</PageTitle>
+
+@*
+    I don't condone or recommend the use of non standard tags like <wrap>, but this is a tech demo 
+    so I might as well have a bit of fun with it
+*@
+<wrap>
+    <div class="states-grid-wrap">
+        <div class="states-grid-controls">
+            <EditForm Model="_emptyModel">
+                <label class="form-label" for="selected-date">Date</label>
+                <InputDate id="selected-date"
+                    @bind-Value=_selectedDate
+                    @bind-Value:after=FetchDayAsync
+                    class="form-control"
+                    min="2020-03-04"
+                    max="2021-03-07" />
+            </EditForm>
+        </div>
+        <QuickGrid Items=@_states>
+            <PropertyColumn 
+                Property=@(p => p.Name)
+                Sortable=true />
+            <PropertyColumn 
+                Property=@(p => p.Total) 
+                Sortable=true 
+                Format="n0" 
+                Align=Align.Right />
+            <PropertyColumn 
+                Property=@(p => p.Negative) 
+                Sortable=true 
+                Class=hide-on-phone
+                Format="n0" 
+                Align=Align.Right />
+            <PropertyColumn 
+                Property=@(p => p.Positive) 
+                Sortable=true 
+                Class=hide-on-phone
+                Format="n0" 
+                Align=Align.Right 
+                IsDefaultSort=SortDirection.Descending />
+            <PropertyColumn 
+                Property=@(p => p.HospitalizationRate)
+                Title="Hosp. Rate"
+                Class=hide-on-phone
+                Sortable=true 
+                Format="p2" 
+                Align=Align.Right  />
+            <TemplateColumn 
+                Context=state 
+                Title=Actions 
+                Align=Align.Center>
+                <Button CssClass="expand"
+                    Text=Expand 
+                    OnClick=@(() => FetchStateDailyAsync(state.Name)) 
+                    Theme="@((State == state.Name).If("success", "primary"))" />
+            </TemplateColumn>
+        </QuickGrid>
+    </div>
+ 
+    @if (_daily.Any() && string.IsNullOrEmpty(State) is false)
+    {
+        <div class="daily">
+            <DailyChart Daily=@(_daily.OrderBy(d => d.Day)) State=@State />
+            <div class="daily-grid-and-map">
+                <div class="daily-grid-wrap">
+                    <QuickGrid Items=@_daily>
+                        <PropertyColumn
+                            Class=date-column
+                            Property=@(p => p.Day) 
+                            Sortable=true 
+                            Format="yyyy-MM-dd" 
+                            IsDefaultSort=SortDirection.Descending />
+                        <PropertyColumn 
+                            Property=@(p => p.Total) 
+                            Sortable=true 
+                            Format="n0"
+                            Align=Align.Right />
+                        <PropertyColumn
+                            Property=@(p => p.Negative) 
+                            Sortable=true
+                            Class=hide-on-phone
+                            Format="n0" 
+                            Align=Align.Right />
+                        <PropertyColumn 
+                            Property=@(p => p.Positive) 
+                            Sortable=true
+                            Class=hide-on-phone
+                            Format="n0" 
+                            Align=Align.Right />
+                    </QuickGrid>
+                </div>
+                <Map State=@State />
+            </div>
+        </div>
+    }
+</wrap>

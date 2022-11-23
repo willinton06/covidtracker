@@ -1,0 +1,145 @@
+﻿@using ChartJs.Blazor
+@using ChartJs.Blazor.Common.Axes;
+@using ChartJs.Blazor.Common.Enums;
+@using ChartJs.Blazor.Common;
+@using ChartJs.Blazor.LineChart;
+@using ChartJs.Blazor.Util;
+@using CovidTracker.Shared.Common.RenderLocation;
+@using CovidTracker.Shared.Domains.DailyStats;
+@using System.Drawing;
+
+@if (RenderLocation.RenderLocation is RenderLocations.Client)
+{
+    <Chart @ref=_chart Config=_config />
+}
+else
+{
+    <div class="loading">Chart uses canvas so that'll be a no on the pre-rendering</div>
+}
+
+@code {
+    [Parameter, EditorRequired] public required IOrderedQueryable<SingleDayStateStatsDto> Daily { get; set; }
+    [Parameter, EditorRequired] public required string State { get; set; }
+
+    [Inject] public required ICurrentRenderLocation RenderLocation { get; init; }
+
+    private LineConfig? _config;
+    private Chart? _chart;
+    private string? _lastState;
+
+    protected override void OnInitialized()
+    {
+        _lastState = State;
+
+        _config = new LineConfig
+        {
+            Options = new LineOptions
+            {
+                Responsive = true,
+                Title = new OptionsTitle
+                {
+                    Display = true,
+                    Text = $"{State} daily breakdown"
+                },
+                Tooltips = new Tooltips
+                {
+                    Mode = InteractionMode.Nearest,
+                    Intersect = true
+                },
+                Hover = new Hover
+                {
+                    Mode = InteractionMode.Nearest,
+                    Intersect = true
+                },
+                Scales = new Scales
+                {
+                    XAxes = new List<CartesianAxis>
+                    {
+                        new CategoryAxis
+                        {
+                            ScaleLabel = new ScaleLabel
+                            {
+                                LabelString = "Day"
+                            }
+                        }
+                    },
+                    YAxes = new List<CartesianAxis>
+                    {
+                        new LinearCartesianAxis
+                        {
+                            ScaleLabel = new ScaleLabel
+                            {
+                                LabelString = "Value"
+                            }
+                        }
+                    }
+                }
+            }
+        };
+
+        foreach (var day in Daily)
+        {
+            _config.Data.Labels.Add(day.Day.ToString());
+        }
+
+        foreach (var set in GetDatasets())
+        {
+            _config.Data.Datasets.Add(set);
+        }
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (_lastState == State || _config is null || _chart is null || Daily.Any() is false)
+            return;
+
+        _config.Options.Title.Text = State;
+
+        _config.Data.Labels.Clear();
+
+        foreach (var day in Daily)
+        {
+            _config.Data.Labels.Add(day.Day.ToString());
+        }
+
+        foreach (var (index, set) in GetDatasets().Select((s, i) => (i, s)))
+        {
+            var dataset = (IDataset<int>)_config.Data.Datasets[index];
+            dataset.Clear();
+
+            foreach (var item in set)
+            {
+                dataset.Add(item);
+            }
+        }
+
+        _chart.Update();
+    }
+
+    IEnumerable<IDataset<int>> GetDatasets()
+    {
+        yield return new LineDataset<int>(Daily.Select(d => d.Total))
+        {
+            Label = "Total",
+            BackgroundColor = "#e3e3e38a",
+            BorderColor = "#e3e3e3cc",
+            Fill = FillingMode.Start
+        };
+
+        yield return new LineDataset<int>(Daily.Select(d => d.Positive))
+        {
+            Label = "Positive",
+            BackgroundColor = "#5ec7968a",
+            BorderColor = "#5ec796cc",
+            Fill = FillingMode.Start
+        };
+
+        yield return new LineDataset<int>(Daily.Select(d => d.Negative))
+        {
+            Label = "Negative",
+            BackgroundColor = "#d138388a",
+            BorderColor = "#d13838cc",
+            Fill = FillingMode.Start
+        };
+    }
+}
